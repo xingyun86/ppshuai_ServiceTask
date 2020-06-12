@@ -1,0 +1,2 @@
+# ppshuai_ServiceTask
+Windows下的service服务模板，支持winxp-win10全系列
