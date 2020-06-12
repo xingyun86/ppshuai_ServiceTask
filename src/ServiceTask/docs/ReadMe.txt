@@ -1,0 +1,9 @@
+==================	
+   使用说明
+==================
+1.安装服务：
+install_service.bat
+2.关闭服务：
+kill_service.bat
+3.卸载服务：
+uninstall_service.bat
