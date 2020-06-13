@@ -5,7 +5,7 @@
 
 #pragma once
 
-// kbf.cpp : Defines the entry point for the application.
+// ServiceCore.cpp : Defines the entry point for the application.
 //
 #include <string>
 
@@ -20,7 +20,8 @@
 
 class ServiceLogs
 {
-#define LOG_INFO(fmt, ...) {if (ServiceLogs::GetInstance()->pLog != nullptr){_ftprintf(ServiceLogs::GetInstance()->pLog, fmt, ##__VA_ARGS__);fflush(ServiceLogs::GetInstance()->pLog);}}
+#define LOG_INST            ServiceLogs::GetInstance()->pLog
+#define LOG_INFO(fmt, ...)  {if(LOG_INST != nullptr){_ftprintf(LOG_INST, fmt, ##__VA_ARGS__);fflush(LOG_INST);}}
 public:
     virtual ~ServiceLogs()
     {

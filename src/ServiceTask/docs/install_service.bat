@@ -3,16 +3,17 @@
 CD /D %~dp0
 
 @ECHO "Create app service"
-@ECHO sc create æœåŠ¡åç§° binPath="æœåŠ¡åº”ç”¨ç¨‹åºå…¨è·¯å¾„ æ‰§è¡Œå‚æ•°" start=Auto DisplayName="æœåŠ¡æ˜¾ç¤ºåç§°" 
-sc create kbf binPath="C:\Service\app.exe --service" start=Auto DisplayName="App Service" 
+@ECHO sc create ·şÎñÃû³Æ binPath="·şÎñÓ¦ÓÃ³ÌĞòÈ«Â·¾¶ Ö´ĞĞ²ÎÊı" start=Auto DisplayName="·şÎñÏÔÊ¾Ãû³Æ" 
+sc create app binPath="%CD%\app.exe --service" start=Auto DisplayName="App Service" 
 
 @ECHO "Configure app description service"
-@ECHO sc description æœåŠ¡åç§° "è®¾ç½®æœåŠ¡æè¿°"
+@ECHO sc description ·şÎñÃû³Æ "ÉèÖÃ·şÎñÃèÊö"
 sc description app "App Service"
 
 @ECHO "Configure app service interact own"
-@ECHO sc config æœåŠ¡åç§° type= interact type= own
+@ECHO sc config ·şÎñÃû³Æ type= interact type= own
 sc config app type= interact type= own
 
-@ECHO "Start kbf service"
-net start kbf
+@ECHO "Start app service"
+@ECHO net start ·şÎñÃû³Æ
+net start app

@@ -108,9 +108,6 @@ INT APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
     // Initialize global strings
     _tcsncpy(ServiceLogs::GetInstance()->rootPath, *__targv, sizeof(ServiceLogs::GetInstance()->rootPath) / sizeof(*ServiceLogs::GetInstance()->rootPath));
     *_tcsrchr(ServiceLogs::GetInstance()->rootPath, _T('\\')) = _T('\0');
-    _sntprintf(ServiceLogs::GetInstance()->logsPath, sizeof(ServiceLogs::GetInstance()->logsPath) / sizeof(*ServiceLogs::GetInstance()->logsPath) - 1, _T("%s\\" DEF_APP ".log\0"), ServiceLogs::GetInstance()->rootPath);
-
-    ServiceLogs::GetInstance()->LogStartup(ServiceLogs::GetInstance()->logsPath);
 
     if (__argc == 1)
     {
@@ -121,6 +118,10 @@ INT APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             //如果程序已经存在并且正在运行
             if (GetLastError() != ERROR_ALREADY_EXISTS)
             {
+                _sntprintf(ServiceLogs::GetInstance()->logsPath, sizeof(ServiceLogs::GetInstance()->logsPath) / sizeof(*ServiceLogs::GetInstance()->logsPath) - 1, _T("%s\\" DEF_APP ".log\0"), ServiceLogs::GetInstance()->rootPath);
+
+                ServiceLogs::GetInstance()->LogStartup(ServiceLogs::GetInstance()->logsPath);
+
                 LOG_INFO(_T("%s:%d Task handler started\r\n"), A_To_T(__func__).c_str(), __LINE__);
 
                 SetCurrentDirectory(ServiceLogs::GetInstance()->rootPath);
@@ -132,6 +133,10 @@ INT APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
     }
     else
     {
+        _sntprintf(ServiceLogs::GetInstance()->logsPath, sizeof(ServiceLogs::GetInstance()->logsPath) / sizeof(*ServiceLogs::GetInstance()->logsPath) - 1, _T("%s\\" DEF_APP "-service.log\0"), ServiceLogs::GetInstance()->rootPath);
+
+        ServiceLogs::GetInstance()->LogStartup(ServiceLogs::GetInstance()->logsPath);
+
         LOG_INFO(_T("%s:%d service started\r\n"), A_To_T(__func__).c_str(), __LINE__);
 
         SERVICE_TABLE_ENTRY ServiceStartTable[2] = { 0 };
