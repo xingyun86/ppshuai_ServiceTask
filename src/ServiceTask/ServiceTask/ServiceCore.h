@@ -7,21 +7,57 @@
 
 // kbf.cpp : Defines the entry point for the application.
 //
+#include <string>
+
 #include <stdio.h>
 #include <tchar.h>
 #include <stdlib.h>
-#include <windows.h>
-
-#include <psapi.h>
 #include <userenv.h>
-#pragma comment(lib,"userenv")
+#include <windows.h>
 #include <tlhelp32.h>
+#include <psapi.h>
+#pragma comment(lib,"userenv")
 
-#include <string>
+class ServiceLogs
+{
+#define LOG_INFO(fmt, ...) {if (ServiceLogs::GetInstance()->pLog != nullptr){_ftprintf(ServiceLogs::GetInstance()->pLog, fmt, ##__VA_ARGS__);fflush(ServiceLogs::GetInstance()->pLog);}}
+public:
+    virtual ~ServiceLogs()
+    {
+        LogCleanup();
+    }
+public:
+    /////////////////////////////////////////////////////////////////////////////////////
+    FILE* pLog = nullptr;
+    TCHAR rootPath[MAX_PATH] = { 0 };
+    TCHAR logsPath[MAX_PATH] = { 0 };
+    /////////////////////////////////////////////////////////////////////////////////////
 
-#define LOG_INIT(fn, fmt, ...) {ServiceTask::GetInstance()->pLog = _tfopen(fn, _T("wb"));if (ServiceTask::GetInstance()->pLog != nullptr){_ftprintf(ServiceTask::GetInstance()->pLog, fmt, ##__VA_ARGS__);fclose(ServiceTask::GetInstance()->pLog);ServiceTask::GetInstance()->pLog = nullptr;}}
-#define LOG_INFO(fn, fmt, ...) {ServiceTask::GetInstance()->pLog = _tfopen(fn, _T("ab"));if (ServiceTask::GetInstance()->pLog != nullptr){_ftprintf(ServiceTask::GetInstance()->pLog, fmt, ##__VA_ARGS__);fclose(ServiceTask::GetInstance()->pLog);ServiceTask::GetInstance()->pLog = nullptr;}}
+public:
+    void LogStartup(LPCTSTR lpFileName, LPCTSTR lpMode=_T("wb"))
+    {
+        LogCleanup();
+        pLog = _tfopen(lpFileName, lpMode);
+        if (sizeof(TCHAR) > sizeof(CHAR) && _tcscmp(lpMode, _T("wb")) == 0)
+        {
+            fwrite("\xFF\xFE", 2, 1, pLog);
+        }
+    }
+    void LogCleanup()
+    {
+        if (pLog != nullptr)
+        {
+            fclose(pLog);
+            pLog = nullptr;
+        }
+    }
 
+public:
+    static ServiceLogs* GetInstance() {
+        static ServiceLogs serviceLogsInstance;
+        return &serviceLogsInstance;
+    }
+};
 
 //通用版将wstring转化为string
 __inline std::string W_To_A(const std::wstring& wstr, unsigned int codepage = CP_ACP)
@@ -31,7 +67,7 @@ __inline std::string W_To_A(const std::wstring& wstr, unsigned int codepage = CP
     {
         std::string str(nwstrlen, '\0');
         WideCharToMultiByte(codepage, 0, wstr.c_str(), -1, (LPSTR)str.c_str(), nwstrlen, NULL, NULL);
-        return str;
+        return std::move(str);
     }
     return ("");
 }
@@ -43,7 +79,7 @@ __inline std::wstring A_To_W(const std::string& str, unsigned int codepage = CP_
     {
         std::wstring wstr(nstrlen, L'\0');
         MultiByteToWideChar(codepage, 0, str.c_str(), -1, (LPWSTR)wstr.c_str(), nstrlen);
-        return wstr;
+        return std::move(wstr);
     }
     return (L"");
 }

@@ -3,12 +3,11 @@
 
 #include "ServiceCore.h"
 
-#define DEF_APP "APP"
+#define DEF_APP         "APP"
+#define WAIT_HINT_SECS  10000   //10s
+#define SERVICE_NAME    "" DEF_APP "_SERVICE"
 
-#define DELAY_TIMES 10000   //10s
-#define SERVICE_NAME "" DEF_APP "_SERVICE"
-
-INT quitFlag = 0;
+INT threadStatus = 0;
 SC_HANDLE schService = NULL;
 SC_HANDLE schSCManager = NULL;
 TCHAR szSvcName[MAXCHAR] = { 0 };
@@ -19,20 +18,16 @@ void WINAPI ServiceHandler(DWORD fdwControl);
 
 DWORD WINAPI ServiceCoreThread(LPVOID param)
 {
-    while (true)
+    while (threadStatus != 1)
     {
-        if (quitFlag == 1)
-        {
-            break;
-        }
         PROCESS_INFORMATION pi = { 0 };
         TCHAR progName[MAX_PATH] = { 0 };
-        _sntprintf(progName, sizeof(progName) / sizeof(*progName), TEXT("%s\\" DEF_APP ".exe"), ServiceTask::GetInstance()->rootPath);
+        _sntprintf(progName, sizeof(progName) / sizeof(*progName), TEXT("%s\\" DEF_APP ".exe"), ServiceLogs::GetInstance()->rootPath);
         if (CreateProcessAsAdministrator(progName, &pi))
         {
-            LOG_INFO(ServiceTask::GetInstance()->logsPath, _T("%s:%d CreateProcessAsAdministrator success\r\n"), A_To_T(__func__).c_str(), __LINE__);
+            LOG_INFO(_T("%s:%d CreateProcessAsAdministrator success\r\n"), A_To_T(__func__).c_str(), __LINE__);
         }
-        Sleep(DELAY_TIMES);
+        Sleep(WAIT_HINT_SECS);
     }
     return NULL;
 }
@@ -48,7 +43,7 @@ void WINAPI ServiceHandler(DWORD fdwControl)
         ServiceStatus.dwCurrentState = SERVICE_STOPPED;
         ServiceStatus.dwCheckPoint = 0;
         ServiceStatus.dwWaitHint = 0;
-        quitFlag = 1;
+        threadStatus = 1;
         //add you quit code here
     }
     break;
@@ -60,7 +55,7 @@ void WINAPI ServiceHandler(DWORD fdwControl)
     };
     if (!SetServiceStatus(hServiceStatusHandle, &ServiceStatus))
     {
-        LOG_INFO(ServiceTask::GetInstance()->logsPath, _T("%s:%d SetServiceStatus failed(%d)\r\n"), A_To_T(__func__).c_str(), __LINE__, GetLastError());
+        LOG_INFO(_T("%s:%d SetServiceStatus failed(%d)\r\n"), A_To_T(__func__).c_str(), __LINE__, GetLastError());
         return;
     }
 }
@@ -77,7 +72,7 @@ void WINAPI ServiceMainProc(int argc, char** argv)
     hServiceStatusHandle = RegisterServiceCtrlHandler(_T(SERVICE_NAME), ServiceHandler);
     if (hServiceStatusHandle == NULL)
     {
-        LOG_INFO(ServiceTask::GetInstance()->logsPath, _T("%s:%d RegisterServiceCtrlHandler failed(%d)\r\n"), A_To_T(__func__).c_str(), __LINE__, GetLastError());
+        LOG_INFO(_T("%s:%d RegisterServiceCtrlHandler failed(%d)\r\n"), A_To_T(__func__).c_str(), __LINE__, GetLastError());
         return;
     }
 
@@ -85,17 +80,17 @@ void WINAPI ServiceMainProc(int argc, char** argv)
     HANDLE task_handle = CreateThread(NULL, NULL, ServiceCoreThread, NULL, NULL, NULL);
     if (task_handle == NULL)
     {
-        LOG_INFO(ServiceTask::GetInstance()->logsPath, _T("%s:%d CreateThread ServiceCoreThread failed(%d)\r\n"), A_To_T(__func__).c_str(), __LINE__, GetLastError());
+        LOG_INFO(_T("%s:%d CreateThread ServiceCoreThread failed(%d)\r\n"), A_To_T(__func__).c_str(), __LINE__, GetLastError());
         return;
     }
 
     // Initialization complete - report running status 
     ServiceStatus.dwCurrentState = SERVICE_RUNNING;
     ServiceStatus.dwCheckPoint = 0;
-    ServiceStatus.dwWaitHint = DELAY_TIMES;
+    ServiceStatus.dwWaitHint = WAIT_HINT_SECS;
     if (!SetServiceStatus(hServiceStatusHandle, &ServiceStatus))
     {
-        LOG_INFO(ServiceTask::GetInstance()->logsPath, _T("%s:%d SetServiceStatus failed(%d)\r\n"), A_To_T(__func__).c_str(), __LINE__, GetLastError());
+        LOG_INFO(_T("%s:%d SetServiceStatus failed(%d)\r\n"), A_To_T(__func__).c_str(), __LINE__, GetLastError());
         return;
     }
 }
@@ -111,36 +106,33 @@ INT APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
     // TODO: Place code here.
     // Initialize global strings
-    _tcsncpy(ServiceTask::GetInstance()->rootPath, *__targv, sizeof(ServiceTask::GetInstance()->rootPath) / sizeof(*ServiceTask::GetInstance()->rootPath));
-    *_tcsrchr(ServiceTask::GetInstance()->rootPath, _T('\\')) = _T('\0');
-    _sntprintf(ServiceTask::GetInstance()->logsPath, sizeof(ServiceTask::GetInstance()->logsPath) / sizeof(*ServiceTask::GetInstance()->logsPath) - 1, _T("%s\\" DEF_APP ".log\0"), ServiceTask::GetInstance()->rootPath);
+    _tcsncpy(ServiceLogs::GetInstance()->rootPath, *__targv, sizeof(ServiceLogs::GetInstance()->rootPath) / sizeof(*ServiceLogs::GetInstance()->rootPath));
+    *_tcsrchr(ServiceLogs::GetInstance()->rootPath, _T('\\')) = _T('\0');
+    _sntprintf(ServiceLogs::GetInstance()->logsPath, sizeof(ServiceLogs::GetInstance()->logsPath) / sizeof(*ServiceLogs::GetInstance()->logsPath) - 1, _T("%s\\" DEF_APP ".log\0"), ServiceLogs::GetInstance()->rootPath);
+
+    ServiceLogs::GetInstance()->LogStartup(ServiceLogs::GetInstance()->logsPath);
 
     if (__argc == 1)
     {
         HANDLE hMutex = CreateMutex(NULL, FALSE, _T("__" DEF_APP "_SINGLE_INSTANCE__"));
 
-        if (hMutex == NULL)
+        if (hMutex != NULL)
         {
-            return FALSE;
-        }
+            //如果程序已经存在并且正在运行
+            if (GetLastError() != ERROR_ALREADY_EXISTS)
+            {
+                LOG_INFO(_T("%s:%d Task handler started\r\n"), A_To_T(__func__).c_str(), __LINE__);
 
-        //如果程序已经存在并且正在运行
-        if (GetLastError() != ERROR_ALREADY_EXISTS)
-        {
-            LOG_INFO(ServiceTask::GetInstance()->logsPath, _T("%s:%d Task handler started\r\n"), A_To_T(__func__).c_str(), __LINE__);
-
-            bool result = false;
-            HMODULE hModule = NULL;
-
-            SetCurrentDirectory(ServiceTask::GetInstance()->rootPath);
+                SetCurrentDirectory(ServiceLogs::GetInstance()->rootPath);
             
-            ServiceTask::GetInstance()->Run();
+                ServiceTask::GetInstance()->Run();
+            }
+            CloseHandle(hMutex);
         }
-        CloseHandle(hMutex);
     }
     else
     {
-        LOG_INIT(ServiceTask::GetInstance()->logsPath, _T("%s:%d service started\r\n"), __func__, __LINE__);
+        LOG_INFO(_T("%s:%d service started\r\n"), A_To_T(__func__).c_str(), __LINE__);
 
         SERVICE_TABLE_ENTRY ServiceStartTable[2] = { 0 };
 
@@ -152,6 +144,8 @@ INT APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         // 启动服务的控制分派机线程
         StartServiceCtrlDispatcher(ServiceStartTable);
     }
+
+    ServiceLogs::GetInstance()->LogCleanup();
 
     return (INT)(0);
 }

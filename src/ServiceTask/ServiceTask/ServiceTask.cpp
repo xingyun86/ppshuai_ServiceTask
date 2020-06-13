@@ -14,7 +14,7 @@ void ServiceTask::Run()
     /// </summary>
     while (true)
     {
-        LOG_INFO(logsPath, _T("%s:%d Handle task.\r\n"), A_To_T(__func__).c_str(), __LINE__);
+        LOG_INFO(_T("%s:%d Handle task.\r\n"), A_To_T(__func__).c_str(), __LINE__);
         Sleep(160);
     }
 }
