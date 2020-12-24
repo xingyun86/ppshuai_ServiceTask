@@ -23,11 +23,13 @@ DWORD WINAPI ServiceCoreThread(LPVOID param)
         PROCESS_INFORMATION pi = { 0 };
         TCHAR progName[MAX_PATH] = { 0 };
         _sntprintf(progName, sizeof(progName) / sizeof(*progName), TEXT("%s\\" DEF_APP ".exe"), ServiceLogs::GetInstance()->rootPath);
-        if (CreateProcessAsAdministrator(progName, &pi))
+        if (CreateProcessAsAdministrator(progName, &pi) && (pi.hProcess != NULL))
         {
-            LOG_INFO(_T("%s:%d CreateProcessAsAdministrator success\r\n"), A_To_T(__func__).c_str(), __LINE__);
+            LOG_INFO(_T("%s:%d create process %d success\r\n"), A_To_T(__func__).c_str(), __LINE__, pi.dwProcessId);
+            (WaitForSingleObject(pi.hProcess, INFINITE));
+            LOG_INFO(_T("%s:%d destroy process %d success\r\n"), A_To_T(__func__).c_str(), __LINE__, pi.dwProcessId);
         }
-        Sleep(WAIT_HINT_SECS);
+        Sleep(1);
     }
     return NULL;
 }
