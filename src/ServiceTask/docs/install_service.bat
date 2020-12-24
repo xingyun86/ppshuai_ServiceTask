@@ -4,7 +4,7 @@ CD /D %~dp0
 
 @ECHO "Create app service"
 @ECHO sc create 服务名称 binPath="服务应用程序全路径 执行参数" start=Auto DisplayName="服务显示名称" 
-sc create app binPath="%CD%\app.exe --service" start=Auto DisplayName="App Service" 
+sc create app binPath= "%CD%\app.exe --service" start= Auto DisplayName= "App Service" 
 
 @ECHO "Configure app description service"
 @ECHO sc description 服务名称 "设置服务描述"

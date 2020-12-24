@@ -1,3 +1,3 @@
 
 @ECHO "Close app process"
-TASKKILL /F /IM app.exe
+taskkill /f /im app.exe

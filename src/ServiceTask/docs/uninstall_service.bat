@@ -3,7 +3,7 @@
 CD /D %~dp0
 
 @ECHO "Close app process"
-TASKKILL /F /IM app.exe
+taskkill /f /im app.exe
 
 @ECHO "Stop app service"
 @ECHO net stop ·þÎñÃû³Æ
